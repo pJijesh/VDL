@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
   FileDown, 
+  FileSpreadsheet,
   Upload, 
   Settings, 
   FileText, 
@@ -957,7 +958,7 @@ export default function App() {
         jobNumber: "JOB-77443",
         ens: "ENS-2026-9",
         readyForHaulier: "Yes",
-        notes: "Direct floristry drops"
+        notes: ""
       },
       {
         id: "954582/3",
@@ -974,7 +975,7 @@ export default function App() {
         jobNumber: "JOB-77445",
         ens: "ENS-22910",
         readyForHaulier: "No",
-        notes: "Needs phytosanitary inspection"
+        notes: ""
       },
       {
         id: "954391/1",
@@ -991,7 +992,7 @@ export default function App() {
         jobNumber: "JOB-77449",
         ens: "ENS-2026-11",
         readyForHaulier: "Yes",
-        notes: "Pre-cleared"
+        notes: ""
       },
       {
         id: "954303/32",
@@ -1008,7 +1009,7 @@ export default function App() {
         jobNumber: "",
         ens: "",
         readyForHaulier: "No",
-        notes: "Awaiting final invoice copy"
+        notes: ""
       }
     ];
 
@@ -1028,7 +1029,7 @@ export default function App() {
         jobNumber: "JOB-PRIO-01",
         ens: "ENS-PRIO-12",
         readyForHaulier: "Yes",
-        notes: "Urgent dispatch scheduled for early morning."
+        notes: ""
       }
     ];
 
@@ -1470,15 +1471,26 @@ export default function App() {
 
                   {/* Export actions */}
                   {consignments.length > 0 && (
-                    <button
-                      onClick={() => exportToMasterSpreadsheet("excel", "all")}
-                      className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold transition-all shadow-xs shrink-0"
-                      title="Download Master Spreadsheet containing all loaded sheets/trucks"
-                      id="btn-bulk-download"
-                    >
-                      <FileDown className="h-4 w-4" />
-                      <span>Bulk Download</span>
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => exportToMasterSpreadsheet("excel", "all")}
+                        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold transition-all shadow-xs shrink-0"
+                        title="Download Master Spreadsheet containing all loaded sheets/trucks as Excel"
+                        id="btn-bulk-download-excel"
+                      >
+                        <FileDown className="h-4 w-4" />
+                        <span>Bulk Excel</span>
+                      </button>
+                      <button
+                        onClick={() => exportToMasterSpreadsheet("csv", "all")}
+                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-3 py-1.5 text-xs font-semibold transition-all shadow-xs shrink-0"
+                        title="Download Master Spreadsheet containing all loaded sheets/trucks as light CSV"
+                        id="btn-bulk-download-csv"
+                      >
+                        <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                        <span>Bulk CSV</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
