@@ -75,7 +75,8 @@ export async function parsePdfWithGemini(pdfBase64: string, mimeType: string = "
     - Rit / Trip / Job number (e.g. "436673", "436805", etc. usually starts with 4 or is a 6-digit number)
     - Truck (e.g. "1083 - 01-BJS-1", "1230 - 36-BRL-5", "BD-262-F")
     - Chauffeur / Driver name (e.g. "Jaap van den Berg", "Krzysztof Makosza", "Martin Biddle", "Mieczyslaw Bojara")
-    - Trailer (often labeled as "Trailer" or "Oplegger" in Dutch, e.g. "7107 - OR-84-XX- VDL", "7070 - OV-91-GB", "CHARTER EIGEN TRAILER", or empty string if none)
+    - Trailer: Often labeled as "Trailer" or "Oplegger" in Dutch, located in the top header section. Correct format examples: "7092 - OR-56-XH", "9032-1 - OR-05-SR", "7107 - OR-84-XX- VDL", "9981 - OR-88-ZZ- KPN", "7070 - OV-91-GB", "CHARTER EIGEN TRAILER".
+      ⚠️ WARNING: DO NOT EVER extract company names, senders, receivers, or consignment details (e.g., "Farmer Gracy", "Adomex International", "Flowerline Ltd", "Evri / Hermes", "POD...") as the trailer number. If the actual short trailer plate number is NOT found in the header, return an empty string "".
 
     Then, extract all consignment listings from the main body.
     Consignments are displayed in horizontal blocks/boxes separated by lines.
@@ -107,7 +108,10 @@ export async function parsePdfWithGemini(pdfBase64: string, mimeType: string = "
               tripOrRitNumber: { type: Type.STRING, description: "Rit or Trip or Job number" },
               truck: { type: Type.STRING, description: "Truck registration plate / identification" },
               driver: { type: Type.STRING, description: "Driver or Chauffeur name" },
-              trailer: { type: Type.STRING, description: "Trailer ID or type" },
+              trailer: { 
+                type: Type.STRING, 
+                description: "Trailer registration plate/ID (e.g. '9032-1 - OR-05-SR' or '7092 - OR-56-XH'). MUST NEVER be a customer company name, sender, consignee, or POD description." 
+              },
             },
             required: ["route", "date", "tripOrRitNumber", "truck", "driver", "trailer"],
           },

@@ -211,7 +211,7 @@ function extractStructureFromLines(lines: string[]): ExtractedManifest {
         const nextIdx = trailerLabelIdx + offset;
         if (nextIdx < lines.length) {
           const nextLine = lines[nextIdx].trim();
-          if (nextLine && !/^(?:rit|truck|chauffeur|driver|customs|donderdag|vrijdag|woensdag|dinsdag|maandag|zaterdag|zondag)/i.test(nextLine)) {
+          if (nextLine && !/\b(?:rit|trip|truck|chauffeur|driver|customs|donderdag|vrijdag|woensdag|dinsdag|maandag|zaterdag|zondag|b\.v\.|ltd|inc|gmbh|co\.)\b/i.test(nextLine)) {
             // Check if it looks like a registration plate (numbers + letters, length >= 6)
             if (/\d+/.test(nextLine) && /[A-Z]+/i.test(nextLine) && nextLine.length >= 6) {
               metadata.trailer = nextLine;
@@ -247,7 +247,54 @@ function extractStructureFromLines(lines: string[]): ExtractedManifest {
     }
   }
   
+  if (metadata.trailer) {
+    metadata.trailer = sanitizeTrailer(metadata.trailer);
+  }
+  
   return { metadata, consignments };
+}
+
+/**
+ * Clean up trailer values that might have had consignment details or overflow text bleed in because of multi-column visual rows
+ */
+export function sanitizeTrailer(val: string): string {
+  let cleaned = val.trim();
+  
+  // Reject company, consignment lists, or POD details entirely
+  if (/\b(?:b\.v\.|ltd|inc|gmbh|co\.|pod|farmer|evri|hermes|adomex|flowerline|visser|heemskerk|bloomon|delivery|rugby|harwich)\b/i.test(cleaned)) {
+    // Check if there is a valid trailer plate structure embedded in this noise (e.g. "9032-1 - OR-05-SR")
+    const innerPlate = cleaned.match(/\b\d{3,5}\s*(?:-\s*\d+)?\s*-\s*[A-Z0-9-]{4,15}\b/i);
+    if (innerPlate) {
+      return innerPlate[0].trim();
+    }
+    return "";
+  }
+  
+  // 1. If it contains a date in DD-MM-YYYY format, truncate at the date
+  const dateIndex = cleaned.search(/\d{2}-\d{2}-\d{4}/);
+  if (dateIndex !== -1) {
+    cleaned = cleaned.substring(0, dateIndex).trim();
+  }
+  
+  // 2. Truncate at common non-trailer keywords (like sending details)
+  const docKeywords = /\b(farmer|evri|hermes|loading|unload|address|pod|consign|delivery|rugby|harwich)\b/i;
+  const kwIndex = cleaned.search(docKeywords);
+  if (kwIndex !== -1) {
+    cleaned = cleaned.substring(0, kwIndex).trim();
+  }
+
+  // 3. Remove trailing dashes, commas, or spaces
+  cleaned = cleaned.replace(/[\s,-]+$/, "").trim();
+
+  // 4. Extract standard license-plate structures if the string starts with one but has leftover clutter
+  // e.g. "7092 - OR-56-XH some leftover text" -> "7092 - OR-56-XH"
+  const platePattern = /^(\d{3,5}\s*(?:-\s*\d+)?\s*-\s*[A-Z0-9-]{4,15})\b/i;
+  const match = cleaned.match(platePattern);
+  if (match) {
+    return match[1].trim();
+  }
+
+  return cleaned;
 }
 
 /**

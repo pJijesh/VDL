@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ExtractedManifest, Consignment, ManifestMetadata, ExtractionHistoryEntry } from "./types.js";
-import { parsePdfLocally } from "./utils/localParser.js";
+import { parsePdfLocally, sanitizeTrailer } from "./utils/localParser.js";
 
 function parseTruckFromFilename(filename: string): string {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
@@ -263,6 +263,7 @@ export default function App() {
         const updatedMetadata: ManifestMetadata = {
           ...result.metadata,
           truck: extractedTruck || result.metadata.truck || "",
+          trailer: sanitizeTrailer(result.metadata.trailer || ""),
           isPriority: isFilenamePriority,
           port: port,
           truckLabel: truckLabel
@@ -752,15 +753,20 @@ export default function App() {
       }
     } else {
       if (history.length === 0) {
-        triggerNotification("No historical records to export.", "error");
-        return;
+        if (consignments.length > 0) {
+          manifestsToExport.push({ metadata, consignments, fileName: activeFileName || "active" });
+        } else {
+          triggerNotification("No loaded trucks or consignments to export.", "error");
+          return;
+        }
+      } else {
+        const sortedHistory = [...history].reverse(); // oldest first, so newest additions are appended
+        manifestsToExport = sortedHistory.map(h => ({
+          metadata: h.metadata,
+          consignments: h.consignments,
+          fileName: h.fileName
+        }));
       }
-      const sortedHistory = [...history].reverse(); // oldest first, so newest additions are appended
-      manifestsToExport = sortedHistory.map(h => ({
-        metadata: h.metadata,
-        consignments: h.consignments,
-        fileName: h.fileName
-      }));
     }
 
     const headers = [
@@ -1110,29 +1116,32 @@ export default function App() {
       {/* Windows 11 Style Header */}
       <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-xs">
         <div className="flex items-center space-x-3.5">
-          <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs select-none">
-            VE
+          <div className="w-8 h-8 bg-white border border-slate-100 rounded flex items-center justify-center overflow-hidden p-0.5 select-none shadow-xs">
+            <img 
+              src="https://iclhub.iclgo.com/images/logo1.png" 
+              alt="ICL Logo" 
+              referrerPolicy="no-referrer"
+              className="max-w-full max-h-full object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  parent.className = "w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-[10px] select-none";
+                  parent.textContent = "ICL";
+                }
+              }}
+            />
           </div>
           <div>
             <h1 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <span>VDL Extractor</span> 
+              <span>ICL -VDL truck tracking </span> 
               <span className="font-normal text-slate-400 text-xs">v1.2.0</span>
             </h1>
-            <p className="text-[10px] text-slate-400 pointer-events-none">Extract customs documents into structured spreadsheets</p>
+            <p className="text-[10px] text-slate-400 pointer-events-none">Extract truck details into structured spreadsheets</p>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2.5">
-          <a 
-            href="https://ai.studio/build" 
-            target="_blank" 
-            referrerPolicy="no-referrer"
-            className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded transition-colors flex items-center gap-1"
-          >
-            <span>Build Portal</span>
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
+
       </header>      {/* Central multi-column viewport workspace */}
       <main className="flex-1 flex overflow-hidden p-6 gap-6 min-h-0">
         
@@ -1203,9 +1212,9 @@ export default function App() {
             </div>
           )}
 
-          {/* Cognitive Engine Selection Block */}
+          {/* Engine Selection Block */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col space-y-2">
-            <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cognitive Extractor Mode</h2>
+            <h2 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Extraction mode</h2>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setEngineMode("local")}
@@ -1216,7 +1225,7 @@ export default function App() {
                 }`}
               >
                 <Cpu className="h-3.5 w-3.5" />
-                <span>Local Core</span>
+                <span>Default mode</span>
               </button>
               <button
                 onClick={() => setEngineMode("ai")}
@@ -1227,9 +1236,15 @@ export default function App() {
                 }`}
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>AI Smart</span>
+                <span>AI Mode</span>
               </button>
             </div>
+          </div>
+
+          {/* Copyright Section */}
+          <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+            <span>Copyright © {new Date().getFullYear()} ICL IT</span>
+            <span>v1.2.0</span>
           </div>
 
         </aside>
@@ -1455,55 +1470,15 @@ export default function App() {
 
                   {/* Export actions */}
                   {consignments.length > 0 && (
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Original Report Format */}
-                      <div className="flex items-center gap-1 border border-slate-200 rounded-lg overflow-hidden bg-white">
-                        <span className="bg-slate-100 text-slate-600 px-2 py-1 text-[10px] font-extrabold uppercase border-r border-slate-200">
-                          Report
-                        </span>
-                        <button
-                          onClick={() => exportToCSV("csv")}
-                          className="hover:bg-slate-50 text-slate-600 px-2.5 py-1 text-xs font-semibold"
-                          title="Download report as CSV"
-                        >
-                          CSV
-                        </button>
-                        <div className="w-px h-4 bg-slate-200" />
-                        <button
-                          onClick={() => exportToCSV("excel")}
-                          className="hover:bg-slate-50 text-slate-600 px-2.5 py-1 text-xs font-semibold"
-                          title="Download report as HTML layout Excel"
-                        >
-                          Excel
-                        </button>
-                      </div>
-
-                      {/* Master spreadsheet (Matching the user's template) */}
-                      <div className="flex items-center gap-1 border border-emerald-200 rounded-lg overflow-hidden bg-white">
-                        <span className="bg-emerald-50 text-emerald-800 px-2 py-1 text-[10px] font-extrabold uppercase border-r border-emerald-100">
-                          Master Sheet
-                        </span>
-                        <button
-                          onClick={() => exportToMasterSpreadsheet("excel", "active")}
-                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1 text-xs font-bold"
-                          title="Export currently loaded truck in Master layout (matches upload)"
-                        >
-                          Excel (Active)
-                        </button>
-                        {history.length > 1 && (
-                          <>
-                            <div className="w-px h-4 bg-emerald-200" />
-                            <button
-                              onClick={() => exportToMasterSpreadsheet("excel", "all")}
-                              className="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 text-xs font-bold"
-                              title="Export ALL trucks in your sidebar history consolidated into one Master Spreadsheet!"
-                            >
-                              Bulk (All {history.length} Trucks)
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    <button
+                      onClick={() => exportToMasterSpreadsheet("excel", "all")}
+                      className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold transition-all shadow-xs shrink-0"
+                      title="Download Master Spreadsheet containing all loaded sheets/trucks"
+                      id="btn-bulk-download"
+                    >
+                      <FileDown className="h-4 w-4" />
+                      <span>Bulk Download</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -1552,7 +1527,7 @@ export default function App() {
                             <div>
                               <p className="text-xs font-bold text-slate-700">No consignment records loaded</p>
                               <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
-                                Upload a manifest PDF in the Left Sidebar or browse local files to extract consignment details.
+                                Upload  PDF files  in the Left Sidebar or browse local files to extract consignment details.
                               </p>
                               <div className="mt-4 flex gap-2 justify-center">
                                 <button
