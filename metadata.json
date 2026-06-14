@@ -1,0 +1,6 @@
+{
+  "name": "VDL Extractor",
+  "description": "An intelligent full-stack utility to extract structured data from customs manifest PDFs into editable tables with CSV, Excel export, and local offline fallback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
