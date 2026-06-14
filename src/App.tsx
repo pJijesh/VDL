@@ -1254,20 +1254,7 @@ export default function App() {
         <section className="flex-1 flex flex-col gap-5 overflow-hidden min-h-0">
             
             {/* Manifest Document Header Fields (Editable) */}
-            {consignments.length > 0 && (
-              activeHistoryFilter === "all" ? (
-                <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/40 rounded-xl border border-blue-100 p-4 shadow-3xs shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-600/10 rounded-lg flex items-center justify-center text-blue-600 shrink-0">
-                      <Truck className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-bold text-slate-800">Consolidated Trucks View</h3>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Showing compiled consignments from all uploaded files. Select a specific truck inside the table toolbar dropdown to edit document-level parameters like Custom Route, Driver, or Registration Plate.</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
+            {consignments.length > 0 && activeHistoryFilter !== "all" && (
                 <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs shrink-0">
                   <div className="flex items-center gap-2 mb-3.5 select-none">
                     <Briefcase className="h-4 w-4 text-slate-400" />
@@ -1398,7 +1385,6 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-              )
             )}
                         {/* Consignments Detailed Table List Card */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
@@ -1407,6 +1393,7 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-white px-5 py-3 shrink-0 select-none">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-emerald-600 shrink-0" />
                     <h3 className="text-xs font-bold text-slate-800">Consignments Record Set</h3>
                     <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800">
                       {filteredConsignments.length} rows {filteredConsignments.length !== consignments.length ? `(filtered from ${consignments.length})` : ""}
